@@ -1,0 +1,159 @@
+## https://docs.docker.com/get-started/part1
+
+# docker images
+Docker image is a immutable file that's essentialy a snaphot of container.
+
+# docker ps
+Container is lightweight and portable encapsulations of an environment in which applications can be run.
+
+
+# We can remove all untagged images by combining docker rmi with the recent dangling=true query:
+docker images -q --filter "dangling=true" | xargs docker rmi
+
+# Docker won't be able to remove images that are behind existing containers, 
+# so you may have to remove stopped containers with docker rm first:
+docker rm `docker ps --no-trunc -aq`
+
+# Always remove a useless, stopped container with:
+docker rm [CONTAINER_ID].
+# Always remove the image behind a useless, stopped container with:
+docker rmi [IMAGE_ID]
+
+
+# What is docker images
+# Do Not Confuse: Docker images themselves are never “started” and never “running”. 
+# The docker run command takes the Docker image as a template and produces a container from it.
+
+# Images are created from a Dockerfile with the docker build command.
+# Images are stored in a Docker registry, such as Docker Hub and can be 
+# downloaded with the docker pull command:
+docker pull ubuntu
+docker images
+docker history 00fd29ccc6f1
+docker ps
+docker run -it ubuntu /bin/bash
+
+# Remove Docker container by CONTAINER ID or NAME:
+# docker rm <container>
+
+# Force removal of a running Docker container:
+# docker rm -f <container>
+
+# Remove all stopped (unused) Docker containers:
+# docker container prune -f
+
+# Force removal of the all Docker containers, including running containers:
+# docker rm -f $(docker ps -a -q)
+
+######### Install docker and test #############################################
+sudo apt-get update
+sudo apt-get install     apt-transport-https     ca-certificates     curl     software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo apt-key fingerprint 0EBFCD88
+sudo add-apt-repository    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+sudo apt-get install docker-ce
+docker-ce | 18.03.0~ce-0~ubuntu | https://download.docker.com/linux/ubuntu xenial/stable amd64 Packages
+sudo apt-get install docker-ce -y
+sudo docker run hello-world
+docker --version
+docker image ls
+mkdir Docker
+cd Docker/
+vi Dockerfile
+FROM python:2.7-slim
+WORKDIR /app
+ADD . /app
+RUN pip install --trusted-host pypi.python.org -r requirements.txt
+EXPOSE 80
+ENV NAME World
+CMD ["python", "app.py"]
+:wq
+
+vi requirements.txt
+Flask
+Redis
+
+vi app.py
+from flask import Flask
+from redis import Redis, RedisError
+import os
+import socket
+
+redis = Redis(host="redis", db=0, socket_connect_timeout=2, socket_timeout=2)
+app = Flask(__name__)
+@app.route("/")
+def hello():
+    try:
+        visits = redis.incr("counter")
+    except RedisError:
+        visits = "<i>cannot connect to Redis, container disbled</i>"
+    html = "<h3>Hello {name}!</h3>" \
+           "<b>Hostname:</b> {hostname}<br/>" \
+           "<b>Visits:</b> {visits}"
+    return html.format(name=os.getenv("NAME", "world"), hostname=socket.gethostname(), visits=visits)
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=80)
+:wq
+
+docker build -t fhello .
+docker run -p 4000:80 fhello
+docker container ls
+docker container ls -all
+git config --global user.name "Akif Yusein"
+git config --global user.email akif05@gmail.com
+git init
+git add *
+tar -czf /home/docker.tar.gz ../Docker
+vi Readmy.md
+git commit -m "first commit"
+git remote add origin https://github.com/akif05/docker-py.git
+git push -u origin master
+docker rm 611
+docker container stop bdda
+docker rm fhello
+docker login
+docker tag fhello akif05/get-started:part2
+docker push akif05/get-started:part2
+docker run -d -p 4000:80 akif05/get-started:part2
+docker stop $(docker ps -aq)
+docker container ls --all
+ 
+## Docker swarm 
+vi docker-compose.yml
+version: "3"
+services:
+  web:
+    # replace username/repo:tag with your name and image details
+    image: akif05/get-started:part2
+    deploy:
+      replicas: 5
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 50M
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "4000:80"
+    networks:
+      - webnet
+networks:
+  webnet:
+  
+# 1. This docker-compose.yml file tells Docker to do the following:
+# 2. Pull the image we uploaded in step 2 from the registry.
+# 3. Run 5 instances of that image as a service called web, limiting each one to use, at most, 10% of the CPU (across all cores), and 50MB of RAM.
+# 4. Immediately restart containers if one fails.
+# 5. Map port 4000 on the host to web’s port 80.
+# 6. Instruct web’s containers to share port 80 via a load-balanced network called webnet. (Internally, 
+#    the containers themselves publish to web’s port 80 at an ephemeral port.)
+# 7. Define the webnet network with the default settings (which is a load-balanced overlay network).  
+
+  
+docker swarm init
+docker stack deploy -c docker-compose.yml getstartedlab
+docker service ls
+docker container ls -q
